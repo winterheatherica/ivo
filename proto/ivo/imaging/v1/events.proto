@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package ivo.imaging.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Topic image.completed. Key: player_id. Producer: imaging (outbox).
+// Consumers: game (the post becomes ready), billing (captures the hold), channels (photo-ready push).
+message ImageCompleted {
+  string job_id = 1;
+  string post_id = 2;
+  string player_id = 3;
+  string hold_id = 4;
+  int32 variant = 5;
+  // Under the posts/{post_id}/ prefix.
+  string s3_key = 6;
+  // The file's SHA-256, in hex.
+  string sha256 = 7;
+  // WD Tagger tags from the final image, used for the comment prompt.
+  repeated string image_tags = 8;
+  int32 attempts = 9;
+}
+
+enum ImageFailureReason {
+  IMAGE_FAILURE_REASON_UNSPECIFIED = 0;
+  IMAGE_FAILURE_REASON_NSFW_REJECTED = 1;
+  IMAGE_FAILURE_REASON_REVIEW_REJECTED = 2;
+  IMAGE_FAILURE_REASON_REVIEW_EXPIRED = 3;
+  IMAGE_FAILURE_REASON_TECHNICAL = 4;
+  IMAGE_FAILURE_REASON_HOLD_FAILED = 5;
+}
+
+// Topic image.failed. Key: player_id. Producer: imaging (outbox).
+// Consumers: game (the post becomes rejected or failed), billing (voids the hold), channels.
+message ImageFailed {
+  string job_id = 1;
+  string post_id = 2;
+  string player_id = 3;
+  string hold_id = 4;
+  int32 variant = 5;
+  ImageFailureReason reason = 6;
+}
+
+// Topic image.review.requested. Key: player_id. Producer: imaging (outbox).
+// Consumers: game (review status), channels (reviewer notification), analytics.
+message ImageReviewRequested {
+  string job_id = 1;
+  string post_id = 2;
+  string player_id = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}

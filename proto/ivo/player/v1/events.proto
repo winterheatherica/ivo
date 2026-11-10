@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package ivo.player.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Topic player.deletion.requested. Key: player_id. Producer: game (outbox).
+// Consumers: every service that stores player data.
+message PlayerDeletionRequested {
+  string request_id = 1;
+  string player_id = 2;
+  google.protobuf.Timestamp requested_at = 3;
+}
+
+// Topic player.deletion.completed. Key: player_id.
+// Producers: every service that owns data. Consumer: game.
+message PlayerDeletionCompleted {
+  string request_id = 1;
+  string player_id = 2;
+  // The name of the service that finished, for example "imaging".
+  string service = 3;
+}
+
+// Topic player.export.requested. Key: player_id. Producer: game (outbox).
+// Consumers: every service that stores player data.
+message PlayerExportRequested {
+  string request_id = 1;
+  string player_id = 2;
+  // The destination prefix, for example exports/<request_id>/.
+  string s3_prefix = 3;
+  google.protobuf.Timestamp requested_at = 4;
+}
+
+// Topic player.export.completed. Key: player_id.
+// Producers: every service that owns data. Consumer: game.
+message PlayerExportCompleted {
+  string request_id = 1;
+  string player_id = 2;
+  string service = 3;
+  string s3_key = 4;
+}

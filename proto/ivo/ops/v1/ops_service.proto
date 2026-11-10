@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ivo.ops.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// OpsService is called by the gateway for the DLQ page in the admin web app.
+service OpsService {
+  rpc ListDeadLetters(ListDeadLettersRequest) returns (ListDeadLettersResponse);
+  // Replay republishes the message to its source topic with the same ce_id and a
+  // replay_of header. Consumers that already succeeded skip it through processed_events.
+  rpc Replay(ReplayRequest) returns (ReplayResponse);
+}
+
+message DeadLetter {
+  string dead_letter_id = 1;
+  string source_topic = 2;
+  string consumer = 3;
+  string event_id = 4;
+  string event_type = 5;
+  string error = 6;
+  google.protobuf.Timestamp received_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  google.protobuf.Timestamp replayed_at = 9;
+}
+
+message ListDeadLettersRequest {
+  // Empty means every topic.
+  string source_topic = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListDeadLettersResponse {
+  repeated DeadLetter dead_letters = 1;
+  string next_page_token = 2;
+}
+
+message ReplayRequest {
+  string dead_letter_id = 1;
+  // Filled in by the gateway from the sub claim of the admin's token.
+  string requested_by = 2;
+}
+
+message ReplayResponse {
+  google.protobuf.Timestamp replayed_at = 1;
+}

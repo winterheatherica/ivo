@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package ivo.billing.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ivo/usage/v1/usage.proto";
+
+// BillingService owns the credit ledger, holds, and entitlements.
+service BillingService {
+  // HoldCredit creates a PENDING hold. Idempotent per hold_id. An insufficient
+  // balance is returned as FAILED_PRECONDITION with the reason INSUFFICIENT_CREDIT.
+  rpc HoldCredit(HoldCreditRequest) returns (HoldCreditResponse);
+  // VoidHold releases a hold that hasn't been captured. Idempotent.
+  rpc VoidHold(VoidHoldRequest) returns (VoidHoldResponse);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+  // ClaimDailyReward is idempotent per player per WIB date.
+  rpc ClaimDailyReward(ClaimDailyRewardRequest) returns (ClaimDailyRewardResponse);
+  // GetUsageSummary is used by netizen to rebuild the Neurons counter and the
+  // daily budget after Valkey restarts.
+  rpc GetUsageSummary(GetUsageSummaryRequest) returns (GetUsageSummaryResponse);
+}
+
+enum HoldRefType {
+  HOLD_REF_TYPE_UNSPECIFIED = 0;
+  HOLD_REF_TYPE_POST = 1;
+  HOLD_REF_TYPE_REROLL = 2;
+}
+
+enum HoldStatus {
+  HOLD_STATUS_UNSPECIFIED = 0;
+  HOLD_STATUS_PENDING = 1;
+  HOLD_STATUS_ATTACHED = 2;
+  HOLD_STATUS_CAPTURED = 3;
+  HOLD_STATUS_VOIDED = 4;
+}
+
+message Balance {
+  int64 available = 1;
+  int64 held = 2;
+  // The part of a refund that exceeded the balance; paid off from the next incoming credits.
+  int64 debt = 3;
+}
+
+message Hold {
+  string hold_id = 1;
+  HoldStatus status = 2;
+  int64 amount = 3;
+  int32 generation = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message HoldCreditRequest {
+  // Equals post_id for a new post.
+  string hold_id = 1;
+  string player_id = 2;
+  int64 amount = 3;
+  HoldRefType ref_type = 4;
+  string ref_id = 5;
+}
+
+message HoldCreditResponse {
+  Hold hold = 1;
+  Balance balance = 2;
+}
+
+message VoidHoldRequest {
+  string hold_id = 1;
+  string reason = 2;
+}
+
+message VoidHoldResponse {
+  Hold hold = 1;
+}
+
+message GetBalanceRequest {
+  string player_id = 1;
+}
+
+message GetBalanceResponse {
+  Balance balance = 1;
+}
+
+message ClaimDailyRewardRequest {
+  string player_id = 1;
+}
+
+message ClaimDailyRewardResponse {
+  int64 credited = 1;
+  bool already_claimed = 2;
+  // The WIB date in YYYY-MM-DD format.
+  string reward_date = 3;
+  Balance balance = 4;
+}
+
+message GetUsageSummaryRequest {
+  // The UTC date in YYYY-MM-DD format; the Workers AI allowance resets at 00:00 UTC.
+  string date_utc = 1;
+}
+
+message ProviderUsage {
+  ivo.usage.v1.UsageProvider provider = 1;
+  int64 neurons = 2;
+  int64 cost_micro_usd = 3;
+}
+
+message GetUsageSummaryResponse {
+  repeated ProviderUsage providers = 1;
+}

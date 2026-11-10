@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ivo.netizen.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+// NetizenService is called by the gateway. The gateway checks that the post belongs
+// to the player through game.GetPost before calling this service.
+service NetizenService {
+  // ListComments only returns comments with visible_at <= now.
+  rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+  // ListUpcomingComments is used by the gateway to schedule SSE events. Its results
+  // are never passed to the app before their visible_at arrives.
+  rpc ListUpcomingComments(ListUpcomingCommentsRequest) returns (ListUpcomingCommentsResponse);
+}
+
+message Comment {
+  string comment_id = 1;
+  string post_id = 2;
+  string netizen_id = 3;
+  string netizen_handle = 4;
+  string netizen_display_name = 5;
+  string text = 6;
+  google.protobuf.Timestamp visible_at = 7;
+}
+
+message ListCommentsRequest {
+  string post_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListCommentsResponse {
+  repeated Comment comments = 1;
+  string next_page_token = 2;
+}
+
+message ListUpcomingCommentsRequest {
+  string post_id = 1;
+  // How far ahead to look, for example 15 minutes.
+  google.protobuf.Duration window = 2;
+}
+
+message ListUpcomingCommentsResponse {
+  repeated Comment comments = 1;
+}

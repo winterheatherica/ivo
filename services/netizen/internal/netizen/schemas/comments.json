@@ -1,0 +1,26 @@
+{
+  "bsonType": "object",
+  "required": ["_id", "post_id", "player_id", "netizen_id", "text", "source", "route",
+               "prompt_version", "planned_at", "visible_at", "created_at"],
+  "properties": {
+    "_id": {"bsonType": "binData", "description": "comment_id = UUIDv5(NS_COMMENT, post_id:netizen_id)"},
+    "post_id": {"bsonType": "binData"},
+    "player_id": {"bsonType": "binData"},
+    "netizen_id": {"bsonType": "binData"},
+    "text": {"bsonType": "string", "minLength": 1, "maxLength": 200},
+    "source": {"enum": ["llm", "template"]},
+    "route": {"enum": ["cloudflare", "modal", "xai", "template"]},
+    "model": {"bsonType": ["string", "null"]},
+    "prompt_version": {"bsonType": "string"},
+    "moderation": {
+      "bsonType": "object",
+      "properties": {
+        "score_bp": {"bsonType": "int", "minimum": 0, "maximum": 10000},
+        "blocked_reason": {"bsonType": ["string", "null"]}
+      }
+    },
+    "planned_at": {"bsonType": "date"},
+    "visible_at": {"bsonType": "date"},
+    "created_at": {"bsonType": "date"}
+  }
+}

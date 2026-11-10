@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ivo.billing.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Topic credit.hold.failed. Key: player_id. Producer: billing (outbox).
+// Consumers: game (the post fails), imaging (the job is cancelled if not yet dispatched).
+// Only happens when post.submitted arrives for a voided hold and the balance is too low.
+message CreditHoldFailed {
+  string hold_id = 1;
+  string player_id = 2;
+  string ref_id = 3;
+  string reason = 4;
+}
+
+enum PaymentProvider {
+  PAYMENT_PROVIDER_UNSPECIFIED = 0;
+  PAYMENT_PROVIDER_GOOGLE_PLAY = 1;
+  PAYMENT_PROVIDER_DOKU = 2;
+}
+
+// Topic payment.completed. Key: player_id. Producer: billing (outbox).
+// Consumers: channels, analytics.
+message PaymentCompleted {
+  string payment_id = 1;
+  string player_id = 2;
+  PaymentProvider provider = 3;
+  string product_id = 4;
+  int64 credits = 5;
+  int64 amount_idr = 6;
+}
+
+enum EntitlementKind {
+  ENTITLEMENT_KIND_UNSPECIFIED = 0;
+  ENTITLEMENT_KIND_COSMETIC = 1;
+  ENTITLEMENT_KIND_SUBSCRIPTION = 2;
+  ENTITLEMENT_KIND_SEASON_PASS = 3;
+}
+
+// Topic entitlement.granted. Key: player_id. Producer: billing (outbox).
+// Consumers: game (read copy), analytics.
+message EntitlementGranted {
+  string player_id = 1;
+  string item_id = 2;
+  EntitlementKind kind = 3;
+  // Empty for permanent items. Subscriptions end at this time, without another event.
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+// Topic entitlement.revoked. Key: player_id. Producer: billing (outbox).
+// Consumers: game, analytics. Used for refunds.
+message EntitlementRevoked {
+  string player_id = 1;
+  string item_id = 2;
+  string reason = 3;
+}

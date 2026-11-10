@@ -1,0 +1,45 @@
+{
+  "bsonType": "object",
+  "required": ["_id", "handle", "display_name", "type", "interests", "active_hours", "voice", "persona_version"],
+  "properties": {
+    "_id": {"bsonType": "binData", "description": "netizen_id (UUID)"},
+    "handle": {"bsonType": "string", "pattern": "^[a-z0-9_.]{3,30}$"},
+    "display_name": {"bsonType": "string", "maxLength": 50},
+    "type": {"bsonType": "string", "maxLength": 30},
+    "interests": {
+      "bsonType": "object",
+      "required": ["regions", "styles"],
+      "properties": {
+        "regions": {"bsonType": "array", "items": {"bsonType": "string"}},
+        "styles": {"bsonType": "array", "items": {"bsonType": "string"}}
+      }
+    },
+    "active_hours": {
+      "bsonType": "array",
+      "minItems": 1,
+      "items": {
+        "bsonType": "object",
+        "required": ["from_hour", "to_hour"],
+        "properties": {
+          "from_hour": {"bsonType": "int", "minimum": 0, "maximum": 23},
+          "to_hour": {"bsonType": "int", "minimum": 0, "maximum": 23}
+        }
+      }
+    },
+    "voice": {
+      "bsonType": "object",
+      "required": ["description"],
+      "properties": {
+        "description": {"bsonType": "string", "maxLength": 500},
+        "emoji_rate_bp": {"bsonType": "int", "minimum": 0, "maximum": 10000},
+        "slang": {"bsonType": "array", "items": {"bsonType": "string"}}
+      }
+    },
+    "true_character": {
+      "bsonType": ["object", "null"],
+      "required": ["description"],
+      "properties": {"description": {"bsonType": "string", "maxLength": 500}}
+    },
+    "persona_version": {"bsonType": "int", "minimum": 1}
+  }
+}

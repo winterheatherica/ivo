@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package ivo.game.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// GameService owns posts, popularity, and seasons.
+// Called by the gateway for players, and by netizen for comment prompt context.
+service GameService {
+  // CreatePost validates the choices, holds credit through billing, then stores
+  // the post with the status QUEUED. Idempotent per (player_id, idempotency_key).
+  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse);
+  // GetPost returns one post with the likes and comments that are already effective.
+  rpc GetPost(GetPostRequest) returns (GetPostResponse);
+  // ListPosts returns the player's posts, newest first.
+  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+  // GetPostContext returns the caption and descriptive text for the comment prompt.
+  rpc GetPostContext(GetPostContextRequest) returns (GetPostContextResponse);
+  // GetPopularity computes followers and the season score at call time.
+  rpc GetPopularity(GetPopularityRequest) returns (GetPopularityResponse);
+  // GetLeaderboard reads the season ranking from the Valkey sorted set.
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse);
+  // RequestDeletion starts the account deletion saga.
+  rpc RequestDeletion(RequestDeletionRequest) returns (RequestDeletionResponse);
+  // RequestExport starts the data export saga.
+  rpc RequestExport(RequestExportRequest) returns (RequestExportResponse);
+}
+
+// PostStatus is the stored status. "Published" is not stored: a post counts
+// as published when its status is READY and published_at has passed.
+enum PostStatus {
+  POST_STATUS_UNSPECIFIED = 0;
+  POST_STATUS_DRAFT = 1;
+  POST_STATUS_QUEUED = 2;
+  POST_STATUS_REVIEW = 3;
+  POST_STATUS_READY = 4;
+  POST_STATUS_REJECTED = 5;
+  POST_STATUS_FAILED = 6;
+}
+
+message Post {
+  string post_id = 1;
+  string player_id = 2;
+  string idol_id = 3;
+  string destination_id = 4;
+  string outfit_id = 5;
+  string pose_id = 6;
+  string expression_id = 7;
+  string caption = 8;
+  PostStatus status = 9;
+  // Computed at read time: the status is READY and published_at has passed.
+  bool published = 10;
+  bool express = 11;
+  int64 credit_cost = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp requested_publish_at = 14;
+  google.protobuf.Timestamp estimated_ready_at = 15;
+  // Empty until the photo is ready.
+  google.protobuf.Timestamp published_at = 16;
+  // A presigned GET, only set once the post is published.
+  string image_url = 17;
+  // Attribution for the Mapillary photographer (CC BY-SA 4.0).
+  string photo_attribution = 18;
+  // Sums of the engagement buckets with effective_at <= now.
+  int64 likes = 19;
+  int64 comments = 20;
+  string failure_reason = 21;
+}
+
+message CreatePostRequest {
+  // Filled in by the gateway from the sub claim of the player's token.
+  string player_id = 1;
+  // The Idempotency-Key header from the app (a UUID).
+  string idempotency_key = 2;
+  string destination_id = 3;
+  string outfit_id = 4;
+  string pose_id = 5;
+  string expression_id = 6;
+  string caption = 7;
+  google.protobuf.Timestamp requested_publish_at = 8;
+  bool express = 9;
+}
+
+message CreatePostResponse {
+  Post post = 1;
+  // True if the idempotency_key was already used with the same body.
+  bool replayed = 2;
+}
+
+message GetPostRequest {
+  string player_id = 1;
+  string post_id = 2;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message ListPostsRequest {
+  string player_id = 1;
+  // False means published posts only.
+  bool include_unpublished = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListPostsResponse {
+  repeated Post posts = 1;
+  string next_page_token = 2;
+}
+
+message GetPostContextRequest {
+  string post_id = 1;
+}
+
+message GetPostContextResponse {
+  string post_id = 1;
+  string caption = 2;
+  string idol_name = 3;
+  string idol_personality = 4;
+  string destination_name = 5;
+  string destination_description = 6;
+  string outfit_name = 7;
+  string pose_name = 8;
+  string expression_name = 9;
+}
+
+message GetPopularityRequest {
+  string player_id = 1;
+}
+
+message GetPopularityResponse {
+  int64 followers = 1;
+  string season_id = 2;
+  int64 season_score = 3;
+  repeated string unlocked_destination_ids = 4;
+  google.protobuf.Timestamp as_of = 5;
+}
+
+message GetLeaderboardRequest {
+  // Empty means the active season.
+  string season_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message LeaderboardEntry {
+  int32 rank = 1;
+  string player_id = 2;
+  string display_name = 3;
+  string idol_name = 4;
+  int64 score = 5;
+}
+
+message GetLeaderboardResponse {
+  string season_id = 1;
+  repeated LeaderboardEntry entries = 2;
+  string next_page_token = 3;
+  // The time of the last fold.
+  google.protobuf.Timestamp as_of = 4;
+}
+
+message RequestDeletionRequest {
+  string player_id = 1;
+}
+
+message RequestDeletionResponse {
+  string request_id = 1;
+}
+
+message RequestExportRequest {
+  string player_id = 1;
+}
+
+message RequestExportResponse {
+  string request_id = 1;
+}

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package ivo.game.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// PhotoLane picks the RabbitMQ queue for a photo job.
+enum PhotoLane {
+  PHOTO_LANE_UNSPECIFIED = 0;
+  PHOTO_LANE_BATCH = 1;
+  PHOTO_LANE_EXPRESS = 2;
+}
+
+// Topic post.submitted. Key: player_id. Producer: game (outbox).
+// Consumers: imaging (creates the job), billing (attaches the hold).
+message PostSubmitted {
+  string post_id = 1;
+  string player_id = 2;
+  // Equals post_id for a new post.
+  string hold_id = 3;
+  int64 credit_cost = 4;
+  // 0 for a new post, 1 and up for regenerations.
+  int32 variant = 5;
+  PhotoLane lane = 6;
+  RenderChoice choice = 7;
+  Background background = 8;
+}
+
+// RenderChoice holds catalog IDs. imaging translates them into prompt tags.
+message RenderChoice {
+  string idol_id = 1;
+  // The idol's fixed appearance tags, frozen at posting time.
+  repeated string idol_tags = 2;
+  string outfit_id = 3;
+  string pose_id = 4;
+  string expression_id = 5;
+  // The destination's local hour at the requested publish time (0-23), for lighting.
+  int32 local_publish_hour = 6;
+}
+
+// Background is a curated Mapillary photo with its placement anchor.
+message Background {
+  string photo_id = 1;
+  // Under the assets/destinations/ prefix.
+  string s3_key = 2;
+  // Foot position relative to the photo's width and height, 0-1.
+  float foot_x = 3;
+  float foot_y = 4;
+  float scale = 5;
+  int32 light_azimuth_deg = 6;
+  string attribution = 7;
+}
+
+// Topic post.published. Key: post_id. Producer: game, through the delayed outbox
+// with available_at = published_at. Consumers: netizen, channels, analytics.
+// The caption is deliberately left out; netizen reads it through GetPostContext.
+message PostPublished {
+  string post_id = 1;
+  string player_id = 2;
+  google.protobuf.Timestamp published_at = 3;
+  string destination_id = 4;
+  string region_code = 5;
+  string country_code = 6;
+  // Style tags from the outfit and pose, for matching netizen interests.
+  repeated string style_tags = 7;
+  // WD Tagger tags from the final image.
+  repeated string image_tags = 8;
+  FrozenInputs inputs = 9;
+}
+
+// FrozenInputs is computed by game once, when the photo is ready, and carried
+// as is so that a replay in netizen always gives the same result.
+message FrozenInputs {
+  int32 rules_version = 1;
+  // Followers at published_at, from the events recorded when the photo was ready.
+  int64 followers = 2;
+  // Basis points (0-10000).
+  int32 location_novelty_bp = 3;
+  // Basis points (0-10000), used as an engagement multiplier.
+  int32 frequency_penalty_bp = 4;
+  int32 local_publish_hour = 5;
+}

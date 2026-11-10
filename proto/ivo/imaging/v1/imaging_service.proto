@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package ivo.imaging.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ImagingService is called by the gateway for the admin review queue,
+// and by billing to reconcile holds.
+service ImagingService {
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+  // ResolveReview is idempotent: a second decision for the same job is ignored.
+  rpc ResolveReview(ResolveReviewRequest) returns (ResolveReviewResponse);
+  rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
+}
+
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_QUEUED = 1;
+  JOB_STATUS_DISPATCHED = 2;
+  JOB_STATUS_COMPLETED = 3;
+  JOB_STATUS_REVIEW = 4;
+  JOB_STATUS_REJECTED = 5;
+  JOB_STATUS_FAILED = 6;
+}
+
+enum ReviewDecision {
+  REVIEW_DECISION_UNSPECIFIED = 0;
+  REVIEW_DECISION_APPROVE = 1;
+  REVIEW_DECISION_REJECT = 2;
+}
+
+message ReviewItem {
+  string job_id = 1;
+  string post_id = 2;
+  // A short-lived presigned GET for the image under the review/ prefix.
+  string image_url = 3;
+  map<string, double> scores = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message ListReviewsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListReviewsResponse {
+  repeated ReviewItem items = 1;
+  string next_page_token = 2;
+}
+
+message ResolveReviewRequest {
+  string job_id = 1;
+  ReviewDecision decision = 2;
+  // Filled in by the gateway from the sub claim of the admin's token.
+  string reviewer_id = 3;
+  string note = 4;
+}
+
+message ResolveReviewResponse {
+  JobStatus status = 1;
+}
+
+message GetJobStatusRequest {
+  string hold_id = 1;
+}
+
+message GetJobStatusResponse {
+  string job_id = 1;
+  JobStatus status = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}

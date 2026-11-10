@@ -1,0 +1,28 @@
+{
+  "bsonType": "object",
+  "required": ["_id", "post_id", "player_id", "chunk_no", "comments", "status", "enqueued_at", "attempts"],
+  "properties": {
+    "_id": {"bsonType": "string", "description": "<post_id>:<chunk_no>"},
+    "post_id": {"bsonType": "binData"},
+    "player_id": {"bsonType": "binData"},
+    "chunk_no": {"bsonType": "int", "minimum": 0},
+    "comments": {
+      "bsonType": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "bsonType": "object",
+        "required": ["netizen_id", "planned_at"],
+        "properties": {
+          "netizen_id": {"bsonType": "binData"},
+          "planned_at": {"bsonType": "date"}
+        }
+      }
+    },
+    "status": {"enum": ["pending", "running", "done"]},
+    "enqueued_at": {"bsonType": "date"},
+    "run_id": {"bsonType": ["string", "null"]},
+    "attempts": {"bsonType": "int", "minimum": 0},
+    "done_at": {"bsonType": ["date", "null"]}
+  }
+}

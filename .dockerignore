@@ -1,0 +1,7 @@
+.git
+.idea
+.vscode
+docs
+*.pdf
+**/*_test.go
+deploy/compose

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ivo.usage.v1;
+
+enum UsageProvider {
+  USAGE_PROVIDER_UNSPECIFIED = 0;
+  USAGE_PROVIDER_CLOUDFLARE = 1;
+  USAGE_PROVIDER_MODAL = 2;
+  USAGE_PROVIDER_XAI = 3;
+}
+
+// Topic usage.recorded. Key: player_id, or "shared" for shared costs such as
+// cold starts. Producers: netizen, imaging. Consumers: billing (cost ledger), analytics.
+message UsageRecorded {
+  string usage_id = 1;
+  string player_id = 2;
+  string post_id = 3;
+  UsageProvider provider = 4;
+  string model = 5;
+  int64 input_tokens = 6;
+  int64 output_tokens = 7;
+  int64 neurons = 8;
+  double gpu_seconds = 9;
+  // An integer so that cost sums are exact.
+  int64 cost_micro_usd = 10;
+}

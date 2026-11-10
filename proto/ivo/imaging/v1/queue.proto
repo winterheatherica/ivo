@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package ivo.imaging.v1;
+
+// JobMessage is the message body in the RabbitMQ queues image.batch and image.express,
+// and in their retry queues. The job status itself stays in the image_jobs table in Postgres.
+message JobMessage {
+  string job_id = 1;
+  // The number of previous technical retries (0-3).
+  int32 retry_count = 2;
+}

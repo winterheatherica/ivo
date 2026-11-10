@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package ivo.imaging.v1;
+
+// The HTTP JSON (protojson) contract between imaging and the GPU worker on Modal:
+//   POST /batches             body RenderBatchRequest, response 202 with a call_id
+//   GET  /batches/{call_id}   202 while running, 200 with a RenderBatchResult
+// The GPU worker holds no AWS credentials; all S3 access goes through presigned URLs.
+
+message RenderBatchRequest {
+  // Also used as the idempotency key.
+  string batch_id = 1;
+  repeated RenderJob jobs = 2;
+}
+
+message RenderJob {
+  string job_id = 1;
+  repeated string positive_tags = 2;
+  repeated string negative_tags = 3;
+  int32 width = 4;
+  int32 height = 5;
+  // 3: the first render plus 2 re-renders after rejections.
+  int32 max_attempts = 6;
+  RenderBackground background = 7;
+  // A presigned PUT for the final photo (image/webp), valid for 2 hours.
+  string output_put_url = 8;
+  // A presigned PUT for the review image (image/webp, SSE-KMS), valid for 2 hours.
+  string review_put_url = 9;
+}
+
+message RenderBackground {
+  // A presigned GET for the curated Mapillary photo.
+  string get_url = 1;
+  float foot_x = 2;
+  float foot_y = 3;
+  float scale = 4;
+  int32 light_azimuth_deg = 5;
+}
+
+enum RenderOutcome {
+  RENDER_OUTCOME_UNSPECIFIED = 0;
+  RENDER_OUTCOME_PASSED = 1;
+  RENDER_OUTCOME_REVIEW = 2;
+  RENDER_OUTCOME_REJECTED = 3;
+  RENDER_OUTCOME_ERROR = 4;
+}
+
+message RenderBatchResult {
+  string batch_id = 1;
+  repeated RenderJobResult results = 2;
+  bool cold_start = 3;
+  double gpu_seconds = 4;
+}
+
+message RenderJobResult {
+  string job_id = 1;
+  RenderOutcome outcome = 2;
+  int32 attempts = 3;
+  double gpu_seconds = 4;
+  map<string, double> nsfw_scores = 5;
+  repeated string image_tags = 6;
+  // The file's SHA-256 in hex. For REJECTED, the hash of the last rejected image.
+  string sha256 = 7;
+  string error = 8;
+}

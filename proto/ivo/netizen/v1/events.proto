@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ivo.netizen.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Topic engagement.recorded. Key: player_id. Producer: netizen, directly without
+// an outbox; event_id = UUIDv5(NS_EVENT, "engagement.recorded:" + post_id).
+// Consumers: game (PopularityEvent), channels (push schedule), analytics.
+message EngagementRecorded {
+  string post_id = 1;
+  string player_id = 2;
+  int32 rules_version = 3;
+  int32 persona_version = 4;
+  // 15-minute buckets, aligned to minutes 00/15/30/45 UTC, sorted by starts_at.
+  repeated EngagementBucket buckets = 5;
+  int64 total_likes = 6;
+  int64 total_comments = 7;
+  // Empty if there are no comments.
+  google.protobuf.Timestamp first_comment_at = 8;
+}
+
+message EngagementBucket {
+  google.protobuf.Timestamp starts_at = 1;
+  int32 likes = 2;
+  int32 comments = 3;
+  // The time of the last reaction in this bucket. The bucket's numbers apply from
+  // this time on, so likes and comments are never counted before the reactions happen.
+  google.protobuf.Timestamp effective_at = 4;
+}
+
+enum CommentVoice {
+  COMMENT_VOICE_UNSPECIFIED = 0;
+  COMMENT_VOICE_REGULAR = 1;
+  COMMENT_VOICE_TRUE_CHARACTER = 2;
+}
+
+// Topic netizen.comment.requested. Key: post_id and the chunk number.
+// Producer: netizen; event_id = UUIDv5(NS_EVENT, "netizen.comment.requested:" + post_id + ":" + chunk_no).
+// Consumer: the netizen comment workers (group netizen-comment, autoscaled by KEDA).
+message CommentRequested {
+  string post_id = 1;
+  string player_id = 2;
+  int32 chunk_no = 3;
+  int32 chunk_count = 4;
+  // Every comment in one chunk uses the same voice.
+  CommentVoice voice = 5;
+  repeated PlannedComment comments = 6;
+}
+
+message PlannedComment {
+  string netizen_id = 1;
+  google.protobuf.Timestamp planned_at = 2;
+}

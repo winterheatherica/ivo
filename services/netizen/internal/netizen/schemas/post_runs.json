@@ -1,0 +1,25 @@
+{
+  "bsonType": "object",
+  "required": ["_id", "player_id", "status", "rules_version", "persona_version",
+               "chunk_count", "chunks_done", "totals", "created_at", "updated_at"],
+  "properties": {
+    "_id": {"bsonType": "binData", "description": "post_id"},
+    "player_id": {"bsonType": "binData"},
+    "status": {"enum": ["reacting", "reacted", "commented"]},
+    "rules_version": {"bsonType": "int", "minimum": 1},
+    "persona_version": {"bsonType": "int", "minimum": 1},
+    "chunk_count": {"bsonType": "int", "minimum": 0},
+    "chunks_done": {"bsonType": "array", "items": {"bsonType": "int"}},
+    "totals": {
+      "bsonType": "object",
+      "required": ["likes", "comments"],
+      "properties": {
+        "likes": {"bsonType": ["int", "long"], "minimum": 0},
+        "comments": {"bsonType": ["int", "long"], "minimum": 0}
+      }
+    },
+    "first_comment_at": {"bsonType": ["date", "null"]},
+    "created_at": {"bsonType": "date"},
+    "updated_at": {"bsonType": "date"}
+  }
+}
